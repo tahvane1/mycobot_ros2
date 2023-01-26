@@ -13,7 +13,7 @@ class Window:
         self.win = handle
         self.win.resizable(0, 0)  # 固定窗口大小
 
-        self.model = 0
+        self.mode = 0
         self.speed = 50
 
         # 设置默认速度123456
@@ -24,14 +24,14 @@ class Window:
         self.record_coords = [
             [0, 0, 0, 0, 0, 0],
             self.speed,
-            self.model
+            self.mode
         ]
         self.res_angles = [
             [0, 0, 0, 0, 0, 0],
             self.speed,
-            self.model
+            self.mode
         ]
-        self.get_date()
+        self.get_data()
 
         # get screen width and height
         self.ws = self.win.winfo_screenwidth()  # width of the screen
@@ -49,20 +49,20 @@ class Window:
         self.show_init()
 
         # joint 设置按钮
-        tk.Button(self.frmLT, text="设置", width=5, command=self.get_joint_input).grid(
+        tk.Button(self.frmLT, text="set joints", width=5, command=self.get_joint_input).grid(
             row=6, column=1, sticky="w", padx=3, pady=2
         )
 
         # coordination 设置按钮
-        tk.Button(self.frmRT, text="设置", width=5, command=self.get_coord_input).grid(
+        tk.Button(self.frmRT, text="set coords", width=5, command=self.get_coord_input).grid(
             row=6, column=1, sticky="w", padx=3, pady=2
         )
 
         # 夹爪开关按钮
-        tk.Button(self.frmLB, text="夹爪(开)", command=self.gripper_open, width=5).grid(
+        tk.Button(self.frmLB, text="init", command=self.init_pose, width=5).grid(
             row=1, column=0, sticky="w", padx=3, pady=50
         )
-        tk.Button(self.frmLB, text="夹爪(关)", command=self.gripper_close, width=5).grid(
+        tk.Button(self.frmLB, text="home", command=self.home_pose, width=5).grid(
             row=1, column=1, sticky="w", padx=3, pady=2
         )
 
@@ -191,7 +191,7 @@ class Window:
             self.cont_5,
             self.cont_6,
             self.speed,
-            self.model,
+            self.mode,
         ]
 
         self.show_j1 = tk.Label(
@@ -281,7 +281,7 @@ class Window:
             self.coord_ry,
             self.coord_rz,
             self.speed,
-            self.model,
+            self.mode,
         ]
 
         self.show_x = tk.Label(
@@ -341,19 +341,30 @@ class Window:
                 row=i, column=5
             )
 
-    def gripper_open(self):
+    def init_pose(self):
+        self.speed = (
+            int(float(self.get_speed.get())) if self.get_speed.get() else self.speed
+        )
         try:
-            self.mc.set_gripper_state(0, 30)
-        except Exception as e:
-            # 可能由于该方法没有返回值，服务抛出无法处理的错误
-            pass
-
-    def gripper_close(self):
-        try:
-            self.mc.set_gripper_state(1, 30)
+            self.mc.sync_send_angles([0,0,0,0,0,0], self.speed, self.mode)
         except Exception as e:
             pass
+        self.get_data()
+        self.show_j_data(self.angles)
+      #  self.show_j_data(self.res,"coords")
 
+    def home_pose(self):
+        self.speed = (
+            int(float(self.get_speed.get())) if self.get_speed.get() else self.speed
+        )
+        try:
+            self.mc.sync_send_angles([-90,-45,120,-120,-90,0], self.speed,self.mode)
+        except Exception as e:
+            pass
+        self.get_data()
+        self.show_j_data(self.angles) 
+       # self.show_j_data(self.res + [self.get_speed, self.mode],"coords")
+        
     def get_coord_input(self):
         # 获取 coord 输入的数据，发送给机械臂
         c_value = []
@@ -364,10 +375,13 @@ class Window:
         )
         
         try:
-            self.mc.send_coords(c_value,self.speed, self.model)
+            self.mc.sync_send_coords(c_value,self.speed, self.mode)
         except Exception as e:
             pass
-        self.show_j_date(c_value, "coord")
+        self.get_data()
+        self.show_j_data(c_value, "coord")
+       # self.show_j_data()
+        
 
     def get_joint_input(self):
         # 获取joint输入的数据，发送给机械臂
@@ -379,16 +393,15 @@ class Window:
             int(float(self.get_speed.get())) if self.get_speed.get() else self.speed
         )
         
-        res = [j_value, self.speed]
-
         try:
-            self.mc.send_angles(*res)
+            self.mc.sync_send_angles(j_value, self.speed, self.mode)
         except Exception as e:
             pass
-        self.show_j_date(j_value)
+        self.show_j_data(j_value)
+       # self.show_j_data(self.mc.get_coords(),"coords")
         # return j_value,c_value,speed
 
-    def get_date(self):
+    def get_data(self):
         # 拿机械臂的数据，用于展示
         t = time.time()
         while time.time() - t < 2:
@@ -409,20 +422,19 @@ class Window:
  
 
     # def send_input(self,dates):
-    def show_j_date(self, date, way=""):
+    def show_j_data(self, data, way=""):
         # 展示数据
         if way == "coord":
-            for i, j in zip(date, self.coord_all):
+            for i, j in zip(data, self.coord_all):
                 j.set(str(i))
         else:
-            for i, j in zip(date, self.cont_all):
+            for i, j in zip(data, self.cont_all):
                 j.set(str(i) + "°")
 
     def run(self):
         while True:
             try:
-                self.win.update()
-                time.sleep(0.001)
+                self.win.mainloop()
             except tk.TclError as e:
                 if "application has been destroyed" in str(e):
                     break

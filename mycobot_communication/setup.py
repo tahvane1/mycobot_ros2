@@ -29,12 +29,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            # 节点名=包名.文件名:文件中的函数
-            'mycobot_topics_jsnn = mycobot_communication.mycobot_topics_jsnn:main',
-            'mycobot_topics_seeed = mycobot_communication.mycobot_topics_seeed:main',
             'mycobot_services = mycobot_communication.mycobot_services:main',
-            'mycobot_topics_pi = mycobot_communication.mycobot_topics_pi:main',
-            'mycobot_topics = mycobot_communication.mycobot_topics:main',               
+            'mycobot_topics_pi = mycobot_communication.mycobot_topics_pi:main',      
         ],
     },
 )
