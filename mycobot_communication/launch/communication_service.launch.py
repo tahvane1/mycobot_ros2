@@ -21,16 +21,16 @@ from launch import LaunchDescription
 
 def generate_launch_description():
     # <arg name="port" default="/dev/ttyUSB0" />
-    port_launch_arg = DeclareLaunchArgument("port", default_value="/dev/ttyUSB0")
+    port_launch_arg = DeclareLaunchArgument("port", default_value="/dev/ttyAMA0")
 
 
     # <arg name="baud" default="115200" />
-    baud_launch_arg = DeclareLaunchArgument("baud", default_value="115200")
+    baud_launch_arg = DeclareLaunchArgument("baud", default_value="1000000")
 
 
     # <node name="mycobot_services" pkg="mycobot_communication" type="mycobot_services.py" output="screen">
     # 	<param name="port" type="string" value="$(arg port)" />
-    # 	<param name="baud" type="int" value="$(arg baud)" />
+    # 	<param name="baud" type="string" value="$(arg baud)" />
     # </node>
     mycobot_communication_node_with_parameters = Node(
         name="mycobot_services",

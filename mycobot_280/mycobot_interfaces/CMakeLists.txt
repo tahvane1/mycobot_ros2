@@ -26,8 +26,6 @@ set(msg_files
   "msg/MycobotCoords.msg"
   "msg/MycobotSetAngles.msg"
   "msg/MycobotSetCoords.msg"
-  "msg/MycobotGripperStatus.msg"
-  "msg/MycobotPumpStatus.msg"
 )
 
 set(srv_files
@@ -35,8 +33,6 @@ set(srv_files
   "srv/SetAngles.srv"
   "srv/GetCoords.srv"
   "srv/SetCoords.srv"
-  "srv/GripperStatus.srv"
-  "srv/PumpStatus.srv"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

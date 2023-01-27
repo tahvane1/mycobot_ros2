@@ -6,18 +6,15 @@ import signal
 import threading
 
 import rclpy
-
+from rclpy.node import Node
 from mycobot_interfaces.msg import (
     MycobotAngles,
     MycobotCoords,
     MycobotSetAngles,
-    MycobotSetCoords,
-    MycobotGripperStatus,
-    MycobotPumpStatus,
-)
+    MycobotSetCoords)
 
 
-from pymycobot import MyCobotSocket
+from pymycobot import MyCobot
 
 
 class Watcher:
@@ -62,12 +59,11 @@ class Watcher:
             pass
 
 
-class MycobotTopics(object):
+class MycobotTopics(Node):
     def __init__(self):
-        super().__init__("mycobot_topics_pi")
-        # 定义数据
-        self.declare_parameter('port', '/dev/ttyUSB0')
-        self.declare_parameter('baud', '115200')
+        super().__init__("mycobot_280_pi_topics")
+        self.declare_parameter('port', '/dev/ttyAMA0')
+        self.declare_parameter('baud', 1000000)
         self.get_logger().info("start ...")
 
         # problem
@@ -75,9 +71,9 @@ class MycobotTopics(object):
         baud = self.get_parameter("baud").get_parameter_value().integer_value
         self.get_logger().info("%s,%d" % (port, baud))
 
-        # self.mc = MyCobot(port,baud)
-        self.mc = MyCobotSocket(port, baud)  # port
-        self.mc.connect()
+        self.mc = MyCobot(port,baud)
+        #self.mc = MyCobotSocket(port, baud)  # port
+        #self.mc.connect()
 
         self.lock = threading.Lock()
 
@@ -86,8 +82,6 @@ class MycobotTopics(object):
         pb = threading.Thread(target=self.pub_real_coords)
         sa = threading.Thread(target=self.sub_set_angles)
         sb = threading.Thread(target=self.sub_set_coords)
-        sg = threading.Thread(target=self.sub_gripper_status)
-        sp = threading.Thread(target=self.sub_pump_status)
 
         pa.setDaemon(True)
         pa.start()
@@ -97,18 +91,13 @@ class MycobotTopics(object):
         sa.start()
         sb.setDaemon(True)
         sb.start()
-        sg.setDaemon(True)
-        sg.start()
-        sp.setDaemon(True)
-        sp.start()
+    
 
         pa.join()
         pb.join()
         sa.join()
         sb.join()
-        sg.join()
-        sp.join()
-
+    
     def pub_real_angles(self):
         pub = self.create_publisher(
             topic="mycobot/angles_real",
@@ -116,7 +105,6 @@ class MycobotTopics(object):
             qos_profile=5
         )
         ma = MycobotAngles()
-        # 检查节点是否关闭
         while rclpy.ok():
             rclpy.spin_once(self)
             self.lock.acquire()
@@ -133,6 +121,7 @@ class MycobotTopics(object):
             time.sleep(0.25)
 
     def pub_real_coords(self):
+        self.get_logger().info("starting publishing")
         pub = self.create_publisher(
             msg_type=MycobotCoords,
             topic="mycobot/coords_real",
@@ -153,8 +142,10 @@ class MycobotTopics(object):
                 ma.ry = coords[4]
                 ma.rz = coords[5]
                 pub.publish(ma)
-            self.get_logger().info("发布数据中....")
+            self.get_logger().info("....")
             time.sleep(0.25)
+            
+        self.get_logger().info("done publishing")
 
     def sub_set_angles(self):
         def callback(data):
@@ -175,7 +166,7 @@ class MycobotTopics(object):
             callback=callback,
             qos_profile=1
         )
-        self.get_logger().info("接收数据中...")
+        self.get_logger().info("...")
         rclpy.spin(sub)
 
     def sub_set_coords(self):
@@ -193,37 +184,7 @@ class MycobotTopics(object):
         )
         rclpy.spin(sub)
 
-    def sub_gripper_status(self):
-        def callback(data):
-            if data.status:
-                self.mc.set_gripper_state(0, 80)
-            else:
-                self.mc.set_gripper_state(1, 80)
 
-        sub = self.create_subscription(
-            msg_type=MycobotGripperStatus,
-            topic="mycobot/gripper_status",
-            callback=callback,
-            qos_profile=1
-        )
-        rclpy.spin(sub)
-
-    def sub_pump_status(self):
-        def callback(data):
-            if data.status:
-                self.mc.set_basic_output(data.pin1, 0)
-                self.mc.set_basic_output(data.pin2, 0)
-            else:
-                self.mc.set_basic_output(data.pin1, 1)
-                self.mc.set_basic_output(data.pin2, 1)
-
-        sub = self.create_subscription(
-            msg_type=MycobotPumpStatus,
-            topic="mycobot/pump_status",
-            callback=callback,
-            qos_profile=1
-        )
-        rclpy.spin(sub)
 
 def main(args=None):
     rclpy.init(args=args)
